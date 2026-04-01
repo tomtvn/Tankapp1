@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
@@ -58,17 +57,16 @@ const SEED=[
 {id:"h43",date:"2026-03-14",km:22079,total:53.17,ppl:2.189},{id:"h44",date:"2026-03-21",km:22386,total:37.52,ppl:2.329},
 {id:"h45",date:"2026-04-01",km:22892,total:63.77,ppl:2.289}];
 
-const fD=d=>new Date(d).toLocaleDateString(“nl-NL”,{day:“2-digit”,month:“short”});
-const fDY=d=>new Date(d).toLocaleDateString(“nl-NL”,{day:“2-digit”,month:“short”,year:“numeric”});
-const fN=(n,dec=2)=>(n==null||isNaN(n))?”\u2013”:n.toLocaleString(“nl-NL”,{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const fD=d=>new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"});
+const fDY=d=>new Date(d).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"});
+const fN=(n,dec=2)=>(n==null||isNaN(n))?"\u2013":n.toLocaleString("nl-NL",{minimumFractionDigits:dec,maximumFractionDigits:dec});
 
 function BarChart({data,dataKey,color,label,minDomain}){
 const vals=data.map(d=>d[dataKey]);
-const mn=minDomain||Math.min(…vals)*0.85;
-const mx=Math.max(…vals)*1.05;
+const mn=minDomain||Math.min(...vals)*0.85;
+const mx=Math.max(...vals)*1.05;
 const recent=data.slice(-15);
-return(<div style={{background:“linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9))”,border:“1px solid rgba(255,255,255,0.06)”,borderRadius:16,padding:“14px 12px”,marginBottom:20}}>
-
+return(<div style={{background:"linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9))",border:"1px solid rgba(255,255,255,0.06)",borderRadius:16,padding:"14px 12px",marginBottom:20}}>
 <div style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:12,letterSpacing:0.5}}>{label}</div>
 {recent.map((d,i)=>{const pct=mx>mn?((d[dataKey]-mn)/(mx-mn))*100:50;
 return(<div key={i} className="bar-row">
@@ -81,9 +79,9 @@ return(<div key={i} className="bar-row">
 
 function App(){
 const[entries,setEntries]=useState([]);
-const[tab,setTab]=useState(“dashboard”);
+const[tab,setTab]=useState("dashboard");
 const[editId,setEditId]=useState(null);
-const[form,setForm]=useState({date:new Date().toISOString().split(“T”)[0],km:””,total:””,ppl:””});
+const[form,setForm]=useState({date:new Date().toISOString().split("T")[0],km:"",total:"",ppl:""});
 const[delC,setDelC]=useState(null);
 const[toast,setToast]=useState(null);
 
@@ -94,14 +92,14 @@ setEntries(SEED);try{localStorage.setItem(SK,JSON.stringify(SEED))}catch(e){}
 
 const save=useCallback(ne=>{setEntries(ne);try{localStorage.setItem(SK,JSON.stringify(ne))}catch(e){}},[]);
 const msg=m=>{setToast(m);setTimeout(()=>setToast(null),2500)};
-const rf=()=>setForm({date:new Date().toISOString().split(“T”)[0],km:””,total:””,ppl:””});
+const rf=()=>setForm({date:new Date().toISOString().split("T")[0],km:"",total:"",ppl:""});
 
-const sorted=[…entries].sort((a,b)=>a.km-b.km);
+const sorted=[...entries].sort((a,b)=>a.km-b.km);
 const computed=sorted.map((e,i)=>{
 const liters=e.total/e.ppl;const prev=i>0?sorted[i-1].km:null;
 const kmD=prev!=null?e.km-prev:null;const kpl=kmD!=null&&liters>0?kmD/liters:null;
 const cpk=kmD!=null&&kmD>0?e.total/kmD:null;
-return{…e,liters,kmD,kpl,cpk};});
+return{...e,liters,kmD,kpl,cpk};});
 const ws=computed.filter(e=>e.kpl!=null);
 
 const st={
@@ -112,36 +110,34 @@ avgKpl:ws.length>0?ws.reduce((s,e)=>s+e.kpl,0)/ws.length:null,
 avgCpk:ws.length>0?ws.reduce((s,e)=>s+e.cpk,0)/ws.length:null,
 avgLp100:ws.length>0?ws.reduce((s,e)=>s+(100/e.kpl),0)/ws.length:null};
 
-const cd=ws.map(e=>({date:fD(e.date),“km/l”:Math.round(e.kpl*10)/10,”\u20ac/km”:Math.round(e.cpk*1000)/1000,”\u20ac/l”:e.ppl}));
+const cd=ws.map(e=>({date:fD(e.date),"km/l":Math.round(e.kpl*10)/10,"\u20ac/km":Math.round(e.cpk*1000)/1000,"\u20ac/l":e.ppl}));
 
 const submit=()=>{
 const km=parseFloat(form.km),total=parseFloat(form.total),ppl=parseFloat(form.ppl);
-if(!form.date||isNaN(km)||isNaN(total)||isNaN(ppl)||ppl<=0){msg(“Vul alle velden in”);return;}
+if(!form.date||isNaN(km)||isNaN(total)||isNaN(ppl)||ppl<=0){msg("Vul alle velden in");return;}
 const entry={id:editId||Date.now().toString(),date:form.date,km,total,ppl};
-if(editId){save(entries.map(e=>e.id===editId?entry:e));msg(“Bijgewerkt \u2713”)}
-else{save([…entries,entry]);msg(“Opgeslagen \u2713”)}
-rf();setEditId(null);setTab(“dashboard”);};
+if(editId){save(entries.map(e=>e.id===editId?entry:e));msg("Bijgewerkt \u2713")}
+else{save([...entries,entry]);msg("Opgeslagen \u2713")}
+rf();setEditId(null);setTab("dashboard");};
 
 const csv=()=>{
-const h=“Datum;Km;Totaal;Prijs/l;Liters;Km gereden;Km/l;Euro/km\n”;
-const r=computed.map(e=>[e.date,e.km,fN(e.total),fN(e.ppl,3),fN(e.liters,1),e.kmD!=null?e.kmD:””,e.kpl?fN(e.kpl,1):””,e.cpk?fN(e.cpk,3):””].join(”;”)).join(”\n”);
-const b=new Blob([h+r],{type:“text/csv”});const a=document.createElement(“a”);a.href=URL.createObjectURL(b);
-a.download=“brandstof-”+new Date().toISOString().split(“T”)[0]+”.csv”;a.click();msg(“CSV ge\u00ebxporteerd \u2713”);};
+const h="Datum;Km;Totaal;Prijs/l;Liters;Km gereden;Km/l;Euro/km\n";
+const r=computed.map(e=>[e.date,e.km,fN(e.total),fN(e.ppl,3),fN(e.liters,1),e.kmD!=null?e.kmD:"",e.kpl?fN(e.kpl,1):"",e.cpk?fN(e.cpk,3):""].join(";")).join("\n");
+const b=new Blob([h+r],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(b);
+a.download="brandstof-"+new Date().toISOString().split("T")[0]+".csv";a.click();msg("CSV ge\u00ebxporteerd \u2713");};
 
-const iS={width:“100%”,padding:“14px 16px”,background:“rgba(15,23,42,0.8)”,border:“1px solid rgba(255,255,255,0.08)”,borderRadius:12,color:”#f1f5f9”,fontSize:16,fontFamily:”‘JetBrains Mono’,monospace”,outline:“none”,boxSizing:“border-box”};
+const iS={width:"100%",padding:"14px 16px",background:"rgba(15,23,42,0.8)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,color:"#f1f5f9",fontSize:16,fontFamily:"'JetBrains Mono',monospace",outline:"none",boxSizing:"border-box"};
 
-const card=(color,label,value,unit)=>(<div style={{background:“linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9))”,border:“1px solid rgba(255,255,255,0.06)”,borderRadius:16,padding:“14px 16px”}}>
-
+const card=(color,label,value,unit)=>(<div style={{background:"linear-gradient(135deg,rgba(15,23,42,0.95),rgba(30,41,59,0.9))",border:"1px solid rgba(255,255,255,0.06)",borderRadius:16,padding:"14px 16px"}}>
 <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>{label}</div>
 <div style={{display:"flex",alignItems:"baseline",gap:4}}>
 <span className="mono" style={{fontSize:24,fontWeight:800,color}}>{value}</span>
 <span style={{fontSize:11,color:"rgba(255,255,255,0.3)"}}>{unit}</span></div></div>);
 
 return(
-
 <div style={{minHeight:"100vh",background:"linear-gradient(180deg,#0a0f1a,#0f172a,#0a0f1a)",maxWidth:480,margin:"0 auto",paddingBottom:80}}>
 
-{toast&&<div style={{position:“fixed”,top:20,left:“50%”,transform:“translateX(-50%)”,background:“rgba(15,23,42,0.95)”,border:“1px solid rgba(34,211,238,0.3)”,borderRadius:12,padding:“12px 24px”,zIndex:100,fontSize:14,fontWeight:600,color:”#22d3ee”,animation:“fadeIn 0.2s”}}>{toast}</div>}
+{toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:"rgba(15,23,42,0.95)",border:"1px solid rgba(34,211,238,0.3)",borderRadius:12,padding:"12px 24px",zIndex:100,fontSize:14,fontWeight:600,color:"#22d3ee",animation:"fadeIn 0.2s"}}>{toast}</div>}
 
 <div style={{padding:"20px 20px 12px",position:"sticky",top:0,zIndex:50,background:"rgba(10,15,26,0.95)",backdropFilter:"blur(10px)"}}>
 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -154,9 +150,8 @@ return(
 
 <div style={{padding:"0 20px 20px"}}>
 
-{tab===“dashboard”&&<div style={{animation:“fadeIn 0.3s”}}>
+{tab==="dashboard"&&<div style={{animation:"fadeIn 0.3s"}}>
 {entries.length===0?
-
 <div style={{textAlign:"center",padding:"60px 20px"}}>
 <div style={{fontSize:48,marginBottom:16}}>⛽</div>
 <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Welkom bij FuelTrack</div>
@@ -178,15 +173,13 @@ return(
 
 {cd.length>=2&&<>
 <BarChart data={cd} dataKey="km/l" color="#22d3ee" label="VERBRUIK (KM/L)"/>
-<BarChart data={cd} dataKey={”\u20ac/km”} color=”#a78bfa” label=“KOSTEN (\u20ac/KM)”/>
-<BarChart data={cd} dataKey={”\u20ac/l”} color=”#fb923c” label=“BRANDSTOFPRIJS (\u20ac/L)”/>
+<BarChart data={cd} dataKey={"\u20ac/km"} color="#a78bfa" label="KOSTEN (\u20ac/KM)"/>
+<BarChart data={cd} dataKey={"\u20ac/l"} color="#fb923c" label="BRANDSTOFPRIJS (\u20ac/L)"/>
 </>}
 </>}
-
 </div>}
 
-{tab===“add”&&<div style={{animation:“slideUp 0.3s”}}>
-
+{tab==="add"&&<div style={{animation:"slideUp 0.3s"}}>
 <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
 {editId&&<button onClick={()=>{setEditId(null);rf();setTab("history")}} style={{background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:22}}>{"\u2190"}</button>}
 <div style={{fontSize:20,fontWeight:800}}>{editId?"Bewerken":"Nieuwe tankbeurt"}</div></div>
@@ -207,8 +200,7 @@ return(
 <button onClick={submit} style={{background:"linear-gradient(135deg,#22d3ee,#0ea5e9)",border:"none",borderRadius:14,padding:"16px",color:"#0a0f1a",fontSize:16,fontWeight:700,cursor:"pointer",marginTop:8,width:"100%"}}>{editId?"Opslaan":"Tankbeurt registreren"}</button>
 </div></div>}
 
-{tab===“history”&&<div style={{animation:“fadeIn 0.3s”}}>
-
+{tab==="history"&&<div style={{animation:"fadeIn 0.3s"}}>
 <div style={{fontSize:20,fontWeight:800,marginBottom:20}}>Geschiedenis</div>
 {computed.length===0?<div style={{textAlign:"center",padding:"40px",color:"rgba(255,255,255,0.3)"}}>Nog geen tankbeurten</div>
 :<div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -261,8 +253,7 @@ return(
 </div>);
 }
 
-ReactDOM.createRoot(document.getElementById(“root”)).render(<App/>);
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
-
 </body>
 </html>
