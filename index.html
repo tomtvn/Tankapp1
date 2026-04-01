@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>FuelTrack</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230ea5e9'/><text y='70' x='50' text-anchor='middle' font-size='55'>⛽</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,500;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0f1a; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+input:focus { border-color: rgba(34,211,238,0.4) !important; outline: none; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.entry-row:active { background: rgba(34,211,238,0.05) !important; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+const { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+
+const STORAGE_KEY = “fuel-tracker-entries”;
+
+const SEED_DATA = [
+{ id: “h01”, date: “2025-01-04”, km: 5110, total: 39.37, ppl: 1.899 },
+{ id: “h02”, date: “2025-01-18”, km: 5406, total: 38.06, ppl: 1.929 },
+{ id: “h03”, date: “2025-01-29”, km: 5767, total: 49.09, ppl: 1.919 },
+{ id: “h04”, date: “2025-02-08”, km: 6181, total: 41.11, ppl: 1.989 },
+{ id: “h05”, date: “2025-02-19”, km: 6646, total: 52.12, ppl: 1.929 },
+{ id: “h06”, date: “2025-03-05”, km: 7115, total: 52.20, ppl: 1.899 },
+{ id: “h07”, date: “2025-03-18”, km: 7694, total: 52.19, ppl: 1.819 },
+{ id: “h08”, date: “2025-03-29”, km: 7941, total: 28.02, ppl: 1.879 },
+{ id: “h09”, date: “2025-04-06”, km: 8292, total: 33.73, ppl: 1.801 },
+{ id: “h10”, date: “2025-04-13”, km: 8559, total: 25.73, ppl: 1.799 },
+{ id: “h11”, date: “2025-04-20”, km: 8868, total: 32.29, ppl: 1.789 },
+{ id: “h12”, date: “2025-05-03”, km: 9188, total: 31.80, ppl: 1.809 },
+{ id: “h13”, date: “2025-05-04”, km: 9594, total: 34.04, ppl: 1.769 },
+{ id: “h14”, date: “2025-05-14”, km: 10088, total: 46.03, ppl: 1.839 },
+{ id: “h15”, date: “2025-05-25”, km: 10573, total: 47.94, ppl: 1.799 },
+{ id: “h16”, date: “2025-06-04”, km: 10863, total: 27.68, ppl: 1.879 },
+{ id: “h17”, date: “2025-06-15”, km: 11220, total: 33.36, ppl: 1.849 },
+{ id: “h18”, date: “2025-06-17”, km: 11719, total: 46.91, ppl: 1.789 },
+{ id: “h19”, date: “2025-06-17”, km: 12264, total: 58.10, ppl: 1.879 },
+{ id: “h20”, date: “2025-06-18”, km: 12712, total: 38.34, ppl: 1.559 },
+{ id: “h21”, date: “2025-07-01”, km: 13010, total: 32.05, ppl: 1.579 },
+{ id: “h22”, date: “2025-07-02”, km: 13262, total: 29.24, ppl: 1.929 },
+{ id: “h23”, date: “2025-07-03”, km: 13806, total: 60.11, ppl: 1.869 },
+{ id: “h24”, date: “2025-07-03”, km: 14106, total: 25.93, ppl: 1.442 },
+{ id: “h25”, date: “2025-07-06”, km: 14456, total: 28.07, ppl: 1.819 },
+{ id: “h26”, date: “2025-07-27”, km: 14871, total: 40.26, ppl: 1.799 },
+{ id: “h27”, date: “2025-08-03”, km: 15224, total: 33.18, ppl: 1.839 },
+{ id: “h28”, date: “2025-08-16”, km: 15722, total: 45.61, ppl: 1.849 },
+{ id: “h29”, date: “2025-08-31”, km: 16041, total: 33.80, ppl: 1.849 },
+{ id: “h30”, date: “2025-09-07”, km: 16381, total: 32.96, ppl: 1.859 },
+{ id: “h31”, date: “2025-09-26”, km: 17005, total: 57.16, ppl: 1.899 },
+{ id: “h32”, date: “2025-10-20”, km: 17834, total: 31.00, ppl: 1.929 },
+{ id: “h33”, date: “2025-10-31”, km: 18291, total: 45.19, ppl: 1.959 },
+{ id: “h34”, date: “2025-11-08”, km: 18614, total: 32.87, ppl: 1.899 },
+{ id: “h35”, date: “2025-11-23”, km: 18976, total: 41.54, ppl: 1.889 },
+{ id: “h36”, date: “2025-12-07”, km: 19262, total: 30.73, ppl: 1.849 },
+{ id: “h37”, date: “2025-12-20”, km: 19757, total: 47.89, ppl: 1.859 },
+{ id: “h38”, date: “2025-12-30”, km: 20238, total: 52.13, ppl: 1.859 },
+{ id: “h39”, date: “2026-01-21”, km: 20577, total: 44.58, ppl: 1.956 },
+{ id: “h40”, date: “2026-02-04”, km: 20887, total: 41.67, ppl: 2.009 },
+{ id: “h41”, date: “2026-02-15”, km: 21255, total: 40.23, ppl: 1.979 },
+{ id: “h42”, date: “2026-02-28”, km: 21618, total: 43.83, ppl: 2.049 },
+{ id: “h43”, date: “2026-03-14”, km: 22079, total: 53.17, ppl: 2.189 },
+{ id: “h44”, date: “2026-03-21”, km: 22386, total: 37.52, ppl: 2.329 },
+{ id: “h45”, date: “2026-04-01”, km: 22892, total: 63.77, ppl: 2.289 },
+];
+
+const formatDate = (d) => new Date(d).toLocaleDateString(“nl-NL”, { day: “2-digit”, month: “short”, year: “numeric” });
+const formatNum = (n, decimals = 2) => {
+if (n == null || isNaN(n)) return “–”;
+return n.toLocaleString(“nl-NL”, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+};
+
+// Simple SVG icons (no lucide dependency needed)
+const Icons = {
+fuel: (p) => <svg width={p.size||20} height={p.size||20} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round” strokeLinejoin=“round”><path d="M3 22V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v17"/><path d="M13 10h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 6"/><path d="M3 22h10"/><path d="M7 2v4"/><path d="M10 2v4"/></svg>,
+plus: (p) => <svg width={p.size||20} height={p.size||20} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+chart: (p) => <svg width={p.size||20} height={p.size||20} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+clock: (p) => <svg width={p.size||20} height={p.size||20} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+download: (p) => <svg width={p.size||20} height={p.size||20} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+trash: (p) => <svg width={p.size||14} height={p.size||14} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+trendUp: (p) => <svg width={p.size||12} height={p.size||12} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+trendDown: (p) => <svg width={p.size||12} height={p.size||12} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
+gauge: (p) => <svg width={p.size||16} height={p.size||16} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m14.31 8 5.74 9.94"/><path d="M9.69 8h11.48"/></svg>,
+dollar: (p) => <svg width={p.size||16} height={p.size||16} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+droplets: (p) => <svg width={p.size||16} height={p.size||16} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>,
+route: (p) => <svg width={p.size||16} height={p.size||16} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>,
+back: (p) => <svg width={p.size||24} height={p.size||24} viewBox=“0 0 24 24” fill=“none” stroke={p.color||“currentColor”} strokeWidth={p.sw||2} strokeLinecap=“round”><polyline points="15 18 9 12 15 6"/></svg>,
+};
+
+const StatCard = ({ icon, label, value, unit, trend, color = “#22d3ee” }) => {
+const IconFn = Icons[icon];
+return (
+<div style={{ background: “linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))”, border: “1px solid rgba(255,255,255,0.06)”, borderRadius: 16, padding: “16px 18px”, display: “flex”, flexDirection: “column”, gap: 8, position: “relative”, overflow: “hidden” }}>
+<div style={{ position: “absolute”, top: -20, right: -20, width: 80, height: 80, borderRadius: “50%”, background: `${color}08` }} />
+<div style={{ display: “flex”, alignItems: “center”, gap: 8 }}>
+<div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}18`, display: “flex”, alignItems: “center”, justifyContent: “center” }}>
+{IconFn && <IconFn size={16} color={color} />}
+</div>
+<span style={{ fontSize: 11, color: “rgba(255,255,255,0.45)”, fontWeight: 600, textTransform: “uppercase”, letterSpacing: 1 }}>{label}</span>
+</div>
+<div style={{ display: “flex”, alignItems: “baseline”, gap: 4 }}>
+<span style={{ fontSize: 26, fontWeight: 800, color: “#f1f5f9”, fontFamily: “‘JetBrains Mono’, monospace” }}>{value}</span>
+<span style={{ fontSize: 12, color: “rgba(255,255,255,0.35)”, fontWeight: 500 }}>{unit}</span>
+</div>
+{trend != null && (
+<div style={{ display: “flex”, alignItems: “center”, gap: 4, fontSize: 11, color: trend >= 0 ? “#4ade80” : “#f87171” }}>
+{trend >= 0 ? <Icons.trendUp color={trend >= 0 ? “#4ade80” : “#f87171”} /> : <Icons.trendDown color=”#f87171” />}
+<span>{trend >= 0 ? “+” : “”}{formatNum(trend, 1)}% vs vorige</span>
+</div>
+)}
+</div>
+);
+};
+
+const TabButton = ({ active, icon, label, onClick }) => {
+const IconFn = Icons[icon];
+return (
+<button onClick={onClick} style={{ flex: 1, display: “flex”, flexDirection: “column”, alignItems: “center”, gap: 4, padding: “10px 0”, background: “none”, border: “none”, cursor: “pointer”, color: active ? “#22d3ee” : “rgba(255,255,255,0.3)”, transition: “color 0.2s”, position: “relative” }}>
+{IconFn && <IconFn size={20} color={active ? “#22d3ee” : “rgba(255,255,255,0.3)”} sw={active ? 2.5 : 1.5} />}
+<span style={{ fontSize: 10, fontWeight: active ? 700 : 500, letterSpacing: 0.5 }}>{label}</span>
+{active && <div style={{ position: “absolute”, top: 0, left: “25%”, right: “25%”, height: 2, background: “#22d3ee”, borderRadius: 2 }} />}
+</button>
+);
+};
+
+function FuelTracker() {
+const [entries, setEntries] = useState([]);
+const [tab, setTab] = useState(“dashboard”);
+const [loading, setLoading] = useState(true);
+const [editId, setEditId] = useState(null);
+const [form, setForm] = useState({ date: new Date().toISOString().split(“T”)[0], km: “”, total: “”, ppl: “” });
+const [deleteConfirm, setDeleteConfirm] = useState(null);
+const [toast, setToast] = useState(null);
+
+useEffect(() => {
+try {
+const saved = localStorage.getItem(STORAGE_KEY);
+if (saved) {
+const parsed = JSON.parse(saved);
+if (parsed.length > 0) { setEntries(parsed); setLoading(false); return; }
+}
+} catch (e) {}
+setEntries(SEED_DATA);
+try { localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_DATA)); } catch(e) {}
+setLoading(false);
+}, []);
+
+const saveEntries = useCallback((newEntries) => {
+setEntries(newEntries);
+try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newEntries)); } catch (e) {}
+}, []);
+
+const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+
+const sorted = […entries].sort((a, b) => a.km - b.km);
+const computed = sorted.map((entry, i) => {
+const liters = entry.total / entry.ppl;
+const prevKm = i > 0 ? sorted[i - 1].km : null;
+const kmDriven = prevKm != null ? entry.km - prevKm : null;
+const kmPerLiter = kmDriven != null && liters > 0 ? kmDriven / liters : null;
+const costPerKm = kmDriven != null && kmDriven > 0 ? entry.total / kmDriven : null;
+return { …entry, liters, kmDriven, kmPerLiter, costPerKm };
+});
+const withStats = computed.filter(e => e.kmPerLiter != null);
+
+const stats = {
+totalKm: sorted.length >= 2 ? sorted[sorted.length - 1].km - sorted[0].km : 0,
+totalCost: entries.reduce((s, e) => s + e.total, 0),
+totalLiters: computed.reduce((s, e) => s + e.liters, 0),
+avgKmPerLiter: withStats.length > 0 ? withStats.reduce((s, e) => s + e.kmPerLiter, 0) / withStats.length : null,
+avgCostPerKm: withStats.length > 0 ? withStats.reduce((s, e) => s + e.costPerKm, 0) / withStats.length : null,
+avgLitersPer100: withStats.length > 0 ? withStats.reduce((s, e) => s + (100 / e.kmPerLiter), 0) / withStats.length : null,
+lastLitersPer100: withStats.length > 0 ? 100 / withStats[withStats.length - 1].kmPerLiter : null,
+prevLitersPer100: withStats.length > 1 ? 100 / withStats[withStats.length - 2].kmPerLiter : null,
+lastKmPerLiter: withStats.length > 0 ? withStats[withStats.length - 1].kmPerLiter : null,
+prevKmPerLiter: withStats.length > 1 ? withStats[withStats.length - 2].kmPerLiter : null,
+lastCostPerKm: withStats.length > 0 ? withStats[withStats.length - 1].costPerKm : null,
+prevCostPerKm: withStats.length > 1 ? withStats[withStats.length - 2].costPerKm : null,
+};
+
+const trendKpl = stats.prevKmPerLiter ? ((stats.lastKmPerLiter - stats.prevKmPerLiter) / stats.prevKmPerLiter) * 100 : null;
+const trendCpk = stats.prevCostPerKm ? ((stats.lastCostPerKm - stats.prevCostPerKm) / stats.prevCostPerKm) * 100 : null;
+const trendLp100 = stats.prevLitersPer100 ? ((stats.lastLitersPer100 - stats.prevLitersPer100) / stats.prevLitersPer100) * 100 : null;
+
+const chartData = withStats.map(e => ({
+date: formatDate(e.date),
+“km/l”: Math.round(e.kmPerLiter * 100) / 100,
+“€/km”: Math.round(e.costPerKm * 100) / 100,
+“€/l”: e.ppl,
+liters: Math.round(e.liters * 10) / 10,
+}));
+
+const handleSubmit = () => {
+const km = parseFloat(form.km); const total = parseFloat(form.total); const ppl = parseFloat(form.ppl);
+if (!form.date || isNaN(km) || isNaN(total) || isNaN(ppl) || ppl <= 0) { showToast(“Vul alle velden correct in”); return; }
+const entry = { id: editId || Date.now().toString(), date: form.date, km, total, ppl };
+let ne;
+if (editId) { ne = entries.map(e => e.id === editId ? entry : e); showToast(“Tankbeurt bijgewerkt ✓”); }
+else { ne = […entries, entry]; showToast(“Tankbeurt opgeslagen ✓”); }
+saveEntries(ne);
+setForm({ date: new Date().toISOString().split(“T”)[0], km: “”, total: “”, ppl: “” });
+setEditId(null); setTab(“dashboard”);
+};
+const handleDelete = (id) => { saveEntries(entries.filter(e => e.id !== id)); setDeleteConfirm(null); showToast(“Verwijderd ✓”); };
+const handleEdit = (entry) => { setForm({ date: entry.date, km: entry.km.toString(), total: entry.total.toString(), ppl: entry.ppl.toString() }); setEditId(entry.id); setTab(“add”); };
+const exportCSV = () => {
+const header = “Datum;Kilometerstand;Totaal (€);Prijs/liter (€);Liters;Km gereden;Km/liter;€/km\n”;
+const rows = computed.map(e => `${e.date};${e.km};${formatNum(e.total)};${formatNum(e.ppl)};${formatNum(e.liters)};${e.kmDriven ?? ""};${e.kmPerLiter ? formatNum(e.kmPerLiter) : ""};${e.costPerKm ? formatNum(e.costPerKm, 3) : ""}`).join(”\n”);
+const blob = new Blob([header + rows], { type: “text/csv;charset=utf-8” });
+const a = document.createElement(“a”); a.href = URL.createObjectURL(blob);
+a.download = `brandstof-export-${new Date().toISOString().split("T")[0]}.csv`; a.click();
+showToast(“CSV geëxporteerd ✓”);
+};
+
+const inputStyle = { width: “100%”, padding: “14px 16px”, background: “rgba(15,23,42,0.8)”, border: “1px solid rgba(255,255,255,0.08)”, borderRadius: 12, color: “#f1f5f9”, fontSize: 16, fontFamily: “‘JetBrains Mono’, monospace”, outline: “none”, boxSizing: “border-box”, transition: “border-color 0.2s” };
+
+if (loading) return <div style={{ minHeight: “100vh”, background: “#0a0f1a”, display: “flex”, alignItems: “center”, justifyContent: “center” }}><Icons.fuel size={40} color=”#22d3ee” /></div>;
+
+return (
+<div style={{ minHeight: “100vh”, background: “linear-gradient(180deg, #0a0f1a 0%, #0f172a 50%, #0a0f1a 100%)”, fontFamily: “‘DM Sans’, -apple-system, sans-serif”, color: “#f1f5f9”, maxWidth: 480, margin: “0 auto”, position: “relative”, paddingBottom: 80 }}>
+
+```
+  {toast && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "rgba(15,23,42,0.95)", border: "1px solid rgba(34,211,238,0.3)", borderRadius: 12, padding: "12px 24px", zIndex: 100, fontSize: 14, fontWeight: 600, color: "#22d3ee", animation: "fadeIn 0.2s ease-out", backdropFilter: "blur(10px)" }}>{toast}</div>}
+
+  {/* Header */}
+  <div style={{ padding: "20px 20px 16px", background: "linear-gradient(180deg, rgba(10,15,26,1) 0%, rgba(10,15,26,0) 100%)", position: "sticky", top: 0, zIndex: 50 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 12, background: "linear-gradient(135deg, #22d3ee, #0ea5e9)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 15px rgba(34,211,238,0.25)" }}>
+          <Icons.fuel size={18} color="#0a0f1a" sw={2.5} />
+        </div>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.5 }}>FuelTrack</div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 500, letterSpacing: 1 }}>{entries.length} TANKBEURT{entries.length !== 1 ? "EN" : ""}</div>
+        </div>
+      </div>
+      {entries.length > 0 && <button onClick={exportCSV} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600 }}><Icons.download size={14} color="rgba(255,255,255,0.5)" /> CSV</button>}
+    </div>
+  </div>
+
+  <div style={{ padding: "0 20px 20px" }}>
+    {/* DASHBOARD */}
+    {tab === "dashboard" && (
+      <div style={{ animation: "fadeIn 0.3s ease-out" }}>
+        {entries.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <div style={{ width: 80, height: 80, borderRadius: 24, background: "rgba(34,211,238,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icons.fuel size={36} color="#22d3ee" sw={1.5} /></div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>Welkom bij FuelTrack</div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.6, maxWidth: 280 }}>Registreer je eerste tankbeurt om inzicht te krijgen in je brandstofverbruik en kosten.</div>
+            <button onClick={() => setTab("add")} style={{ background: "linear-gradient(135deg, #22d3ee, #0ea5e9)", border: "none", borderRadius: 14, padding: "14px 28px", color: "#0a0f1a", fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}><Icons.plus size={18} color="#0a0f1a" /> Eerste tankbeurt</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+              <StatCard icon="gauge" label="Gem. km/l" value={stats.avgKmPerLiter ? formatNum(stats.avgKmPerLiter, 1) : "–"} unit="km/l" trend={trendKpl} color="#22d3ee" />
+              <StatCard icon="dollar" label="Gem. €/km" value={stats.avgCostPerKm ? formatNum(stats.avgCostPerKm, 3) : "–"} unit="€/km" trend={trendCpk != null ? -trendCpk : null} color="#a78bfa" />
+              <StatCard icon="droplets" label="Verbruik" value={stats.avgLitersPer100 ? formatNum(stats.avgLitersPer100, 1) : "–"} unit="l/100km" trend={trendLp100 != null ? -trendLp100 : null} color="#f472b6" />
+              <StatCard icon="fuel" label="1 op" value={stats.avgKmPerLiter ? formatNum(stats.avgKmPerLiter, 1) : "–"} unit="km" color="#38bdf8" />
+              <StatCard icon="route" label="Totaal km" value={stats.totalKm > 0 ? formatNum(stats.totalKm, 0) : "–"} unit="km" color="#4ade80" />
+              <StatCard icon="droplets" label="Totaal liter" value={formatNum(stats.totalLiters, 0)} unit="L" color="#fb923c" />
+            </div>
+
+            <div style={{ background: "linear-gradient(135deg, rgba(34,211,238,0.12), rgba(139,92,246,0.08))", border: "1px solid rgba(34,211,238,0.15)", borderRadius: 16, padding: "16px 20px", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>Totaal uitgegeven</span>
+              <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>€{formatNum(stats.totalCost)}</span>
+            </div>
+
+            {chartData.length >= 2 && (<>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: 0.5 }}>VERBRUIK (KM/L)</div>
+                <div style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px 8px 8px 0" }}>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <AreaChart data={chartData}>
+                      <defs><linearGradient id="kplGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#22d3ee" stopOpacity={0.3} /><stop offset="100%" stopColor="#22d3ee" stopOpacity={0} /></linearGradient></defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                      <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} width={35} />
+                      <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, fontSize: 12, color: "#f1f5f9" }} />
+                      <Area type="monotone" dataKey="km/l" stroke="#22d3ee" strokeWidth={2.5} fill="url(#kplGrad)" dot={{ r: 4, fill: "#22d3ee", stroke: "#0a0f1a", strokeWidth: 2 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: 0.5 }}>KOSTEN (€/KM)</div>
+                <div style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px 8px 8px 0" }}>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <AreaChart data={chartData}>
+                      <defs><linearGradient id="cpkGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a78bfa" stopOpacity={0.3} /><stop offset="100%" stopColor="#a78bfa" stopOpacity={0} /></linearGradient></defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                      <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} width={35} />
+                      <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, fontSize: 12, color: "#f1f5f9" }} />
+                      <Area type="monotone" dataKey="€/km" stroke="#a78bfa" strokeWidth={2.5} fill="url(#cpkGrad)" dot={{ r: 4, fill: "#a78bfa", stroke: "#0a0f1a", strokeWidth: 2 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: 0.5 }}>BRANDSTOFPRIJS (€/L)</div>
+                <div style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px 8px 8px 0" }}>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                      <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} width={35} domain={["auto", "auto"]} />
+                      <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, fontSize: 12, color: "#f1f5f9" }} />
+                      <Bar dataKey="€/l" fill="#fb923c" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>)}
+          </>
+        )}
+      </div>
+    )}
+
+    {/* ADD TAB */}
+    {tab === "add" && (
+      <div style={{ animation: "slideUp 0.3s ease-out" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          {editId && <button onClick={() => { setEditId(null); setForm({ date: new Date().toISOString().split("T")[0], km: "", total: "", ppl: "" }); setTab("history"); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: 4 }}><Icons.back /></button>}
+          <div style={{ fontSize: 20, fontWeight: 800 }}>{editId ? "Bewerken" : "Nieuwe tankbeurt"}</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.4)", marginBottom: 6, display: "block", letterSpacing: 0.5 }}>DATUM</label>
+            <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.4)", marginBottom: 6, display: "block", letterSpacing: 0.5 }}>KILOMETERSTAND</label>
+            <input type="number" inputMode="numeric" placeholder="bijv. 45230" value={form.km} onChange={e => setForm({ ...form, km: e.target.value })} style={inputStyle} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.4)", marginBottom: 6, display: "block", letterSpacing: 0.5 }}>TOTAAL (€)</label>
+              <input type="number" inputMode="decimal" step="0.01" placeholder="65.00" value={form.total} onChange={e => setForm({ ...form, total: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.4)", marginBottom: 6, display: "block", letterSpacing: 0.5 }}>PRIJS/LITER (€)</label>
+              <input type="number" inputMode="decimal" step="0.001" placeholder="1.899" value={form.ppl} onChange={e => setForm({ ...form, ppl: e.target.value })} style={inputStyle} />
+            </div>
+          </div>
+          {form.total && form.ppl && parseFloat(form.ppl) > 0 && (
+            <div style={{ background: "rgba(34,211,238,0.06)", border: "1px solid rgba(34,211,238,0.15)", borderRadius: 12, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>Berekende liters</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#22d3ee", fontFamily: "'JetBrains Mono', monospace" }}>{formatNum(parseFloat(form.total) / parseFloat(form.ppl), 1)} L</span>
+            </div>
+          )}
+          <button onClick={handleSubmit} style={{ background: "linear-gradient(135deg, #22d3ee, #0ea5e9)", border: "none", borderRadius: 14, padding: "16px", color: "#0a0f1a", fontSize: 16, fontWeight: 700, cursor: "pointer", marginTop: 8, width: "100%" }}>{editId ? "Opslaan" : "Tankbeurt registreren"}</button>
+        </div>
+      </div>
+    )}
+
+    {/* HISTORY TAB */}
+    {tab === "history" && (
+      <div style={{ animation: "fadeIn 0.3s ease-out" }}>
+        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>Geschiedenis</div>
+        {computed.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "rgba(255,255,255,0.3)" }}>Nog geen tankbeurten geregistreerd</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[...computed].reverse().map((entry) => (
+              <div key={entry.id} className="entry-row" style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px 18px", position: "relative", transition: "background 0.15s" }}>
+                {deleteConfirm === entry.id ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center", padding: "8px 0" }}>
+                    <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Verwijderen?</span>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button onClick={() => handleDelete(entry.id)} style={{ background: "#ef4444", border: "none", borderRadius: 10, padding: "10px 24px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Ja, verwijder</button>
+                      <button onClick={() => setDeleteConfirm(null)} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 10, padding: "10px 24px", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuleren</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 700 }}>{formatDate(entry.date)}</div>
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>{entry.km.toLocaleString("nl-NL")} km</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => handleEdit(entry)} style={{ background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600 }}>Bewerk</button>
+                        <button onClick={() => setDeleteConfirm(entry.id)} style={{ background: "rgba(239,68,68,0.1)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: "#ef4444" }}><Icons.trash color="#ef4444" /></button>
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+                      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginBottom: 4, fontWeight: 600 }}>BEDRAG</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>€{formatNum(entry.total)}</div>
+                      </div>
+                      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginBottom: 4, fontWeight: 600 }}>LITERS</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>{formatNum(entry.liters, 1)}</div>
+                      </div>
+                      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginBottom: 4, fontWeight: 600 }}>KM/L</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: entry.kmPerLiter ? "#22d3ee" : "rgba(255,255,255,0.2)" }}>{entry.kmPerLiter ? formatNum(entry.kmPerLiter, 1) : "–"}</div>
+                      </div>
+                      <div style={{ background: "rgba(34,211,238,0.04)", borderRadius: 10, padding: "10px 8px", textAlign: "center", border: "1px solid rgba(34,211,238,0.08)" }}>
+                        <div style={{ fontSize: 9, color: "rgba(56,189,248,0.6)", marginBottom: 4, fontWeight: 600 }}>1 OP</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: entry.kmPerLiter ? "#38bdf8" : "rgba(255,255,255,0.2)" }}>{entry.kmPerLiter ? formatNum(entry.kmPerLiter, 1) : "–"}</div>
+                      </div>
+                    </div>
+                    {entry.kmDriven != null && (
+                      <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                        <span>{entry.kmDriven.toLocaleString("nl-NL")} km gereden</span>
+                        <span>€{formatNum(entry.costPerKm, 3)}/km</span>
+                        <span>€{formatNum(entry.ppl, 3)}/L</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+
+  {/* Bottom Nav */}
+  <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "linear-gradient(180deg, rgba(10,15,26,0.9), rgba(10,15,26,0.98))", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "4px 0 env(safe-area-inset-bottom, 8px)" }}>
+    <TabButton active={tab === "dashboard"} icon="chart" label="Dashboard" onClick={() => setTab("dashboard")} />
+    <TabButton active={tab === "add"} icon="plus" label="Tanken" onClick={() => { setTab("add"); setEditId(null); setForm({ date: new Date().toISOString().split("T")[0], km: "", total: "", ppl: "" }); }} />
+    <TabButton active={tab === "history"} icon="clock" label="Geschiedenis" onClick={() => setTab("history")} />
+  </div>
+</div>
+```
+
+);
+}
+
+ReactDOM.createRoot(document.getElementById(“root”)).render(<FuelTracker />);
+</script>
+
+</body>
+</html>
